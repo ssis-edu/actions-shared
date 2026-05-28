@@ -1,0 +1,86 @@
+name: Deploy to Cloud Run (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      service-name:
+        description: "Cloud Run service name (will also be the image name in Artifact Registry)"
+        type: string
+        required: true
+      region:
+        description: "GCP region"
+        type: string
+        default: "asia-southeast1"
+      project-id:
+        description: "GCP project ID"
+        type: string
+        default: "ssis-dls-sandbox"
+      max-instances:
+        description: "Cloud Run max instances (cost control)"
+        type: number
+        default: 5
+      memory:
+        description: "Cloud Run memory per instance"
+        type: string
+        default: "512Mi"
+      cpu:
+        description: "Cloud Run CPU per instance"
+        type: string
+        default: "1"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: "projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github-ssis-edu/providers/github"
+          service_account: "gh-deploy-cloudrun@ssis-dls-sandbox.iam.gserviceaccount.com"
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
+
+      - name: Build and push image
+        run: |
+          IMAGE="asia-southeast1-docker.pkg.dev/${{ inputs.project-id }}/cloud-run-apps/${{ inputs.service-name }}:${{ github.sha }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ inputs.service-name }} \
+            --image "$IMAGE" \
+            --region "${{ inputs.region }}" \
+            --project "${{ inputs.project-id }}" \
+            --service-account "cloudrun-runtime@${{ inputs.project-id }}.iam.gserviceaccount.com" \
+            --allow-unauthenticated \
+            --max-instances ${{ inputs.max-instances }} \
+            --memory ${{ inputs.memory }} \
+            --cpu ${{ inputs.cpu }} \
+            --quiet
+
+      - name: Surface deployed URL
+        run: |
+          URL=$(gcloud run services describe ${{ inputs.service-name }} \
+            --region "${{ inputs.region }}" \
+            --project "${{ inputs.project-id }}" \
+            --format='value(status.url)')
+          echo "## Deployed" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Service: \`${{ inputs.service-name }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Region: \`${{ inputs.region }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "URL: $URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "Image SHA: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
