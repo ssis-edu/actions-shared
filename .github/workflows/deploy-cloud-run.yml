@@ -14,7 +14,7 @@ on:
       project-id:
         description: "GCP project ID"
         type: string
-        default: "ssis-dls-sandbox"
+        default: "ssis-hs-dls-sandbox"
       max-instances:
         description: "Cloud Run max instances (cost control)"
         type: number
@@ -43,8 +43,8 @@ jobs:
         id: auth
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: "projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github-ssis-edu/providers/github"
-          service_account: "gh-deploy-cloudrun@ssis-dls-sandbox.iam.gserviceaccount.com"
+          workload_identity_provider: "projects/401191583931/locations/global/workloadIdentityPools/github-ssis-edu/providers/github"
+          service_account: "gh-deploy-cloudrun@ssis-hs-dls-sandbox.iam.gserviceaccount.com"
 
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
