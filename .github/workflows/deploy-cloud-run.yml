@@ -14,7 +14,11 @@ on:
       project-id:
         description: "GCP project ID"
         type: string
-        default: "ssis-hs-dls-sandbox"
+        default: "ssis-apps"
+      base-path:
+        description: "Vite base path for path-routed apps served under apps.ssis.edu.vn/<app>/ (e.g. /hs-advisory-hub/). Defaults to / for root-served apps."
+        type: string
+        default: "/"
       max-instances:
         description: "Cloud Run max instances (cost control)"
         type: number
@@ -55,7 +59,7 @@ jobs:
       - name: Build and push image
         run: |
           IMAGE="asia-southeast1-docker.pkg.dev/${{ inputs.project-id }}/cloud-run-apps/${{ inputs.service-name }}:${{ github.sha }}"
-          docker build -t "$IMAGE" .
+          docker build --build-arg VITE_BASE_PATH="${{ inputs.base-path }}" -t "$IMAGE" .
           docker push "$IMAGE"
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
