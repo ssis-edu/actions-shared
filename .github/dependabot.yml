@@ -1,6 +1,28 @@
 version: 2
+# Dependency update policy for this repo — generated 2026-07-16 from what the
+# repo ACTUALLY contains (package.json / workflows / Dockerfile), not copied.
+#
+# CADENCE: weekly, Saturday. That is deliberate — Walter sweeps every repo's
+# green Dependabot PRs at the first Sunday meeting, alongside Da Fino's weekly
+# digest, so a Saturday open means they are raised and CI-green by the sweep.
+#
+# MINOR/PATCH ONLY, grouped. MAJOR-version bumps are NEVER auto-proposed — they
+# stay as visible alerts to be handled deliberately at the desk, because a major
+# can carry a breaking change or touch a guardrail. Dependabot SECURITY updates
+# are separate, are enabled org-wide, and still flow regardless of this ignore.
+#
+# Nothing auto-merges. The PR's own checks must pass before any merge.
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "saturday"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
