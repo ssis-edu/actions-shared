@@ -32,6 +32,15 @@ on:
         type: string
         default: "1"
 
+concurrency:
+  # Serialise deploys of the same Cloud Run service so rapid successive merges
+  # (e.g. the Sunday Dependabot sweep) don't race — the older in-flight deploy is
+  # cancelled and the newest commit wins, instead of aborting with a Cloud Run
+  # version-conflict. Keyed per service, so different apps still deploy in
+  # parallel. Added 2026-08-09 after concurrent merges raced three deploys.
+  group: deploy-cloud-run-${{ inputs.service-name }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   id-token: write
