@@ -31,6 +31,10 @@ on:
         description: "Cloud Run CPU per instance"
         type: string
         default: "1"
+      runtime-service-account:
+        description: "Optional dedicated Cloud Run runtime identity. Empty keeps the platform default cloudrun-runtime account."
+        type: string
+        default: ""
 
 concurrency:
   # Serialise deploys of the same Cloud Run service so rapid successive merges
@@ -74,11 +78,15 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
+          RUNTIME_SA="${{ inputs.runtime-service-account }}"
+          if [ -z "$RUNTIME_SA" ]; then
+            RUNTIME_SA="cloudrun-runtime@${{ inputs.project-id }}.iam.gserviceaccount.com"
+          fi
           gcloud run deploy ${{ inputs.service-name }} \
             --image "$IMAGE" \
             --region "${{ inputs.region }}" \
             --project "${{ inputs.project-id }}" \
-            --service-account "cloudrun-runtime@${{ inputs.project-id }}.iam.gserviceaccount.com" \
+            --service-account "$RUNTIME_SA" \
             --allow-unauthenticated \
             --max-instances ${{ inputs.max-instances }} \
             --memory ${{ inputs.memory }} \
@@ -95,5 +103,6 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Service: \`${{ inputs.service-name }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "Region: \`${{ inputs.region }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Runtime identity: \`${{ inputs.runtime-service-account || format('cloudrun-runtime@{0}.iam.gserviceaccount.com', inputs.project-id) }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "URL: $URL" >> "$GITHUB_STEP_SUMMARY"
           echo "Image SHA: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
